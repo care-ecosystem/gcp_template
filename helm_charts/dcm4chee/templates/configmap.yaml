@@ -1,0 +1,52 @@
+{{- if .Values.configMap.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "dcm4chee.fullname" . }}-config
+  labels:
+    {{- include "dcm4chee.labels" . | nindent 4 }}
+data:
+  {{- if .Values.domain }}
+  DOMAIN: {{ .Values.domain | quote }}
+  {{- end }}
+
+  # PostgreSQL configuration
+  POSTGRES_HOST: {{ .Values.postgres.host | quote }}
+  POSTGRES_PORT: {{ .Values.postgres.port | quote }}
+  POSTGRES_DB: {{ .Values.postgres.database | quote }}
+
+  # MinIO configuration
+  MINIO_ENDPOINT: {{ .Values.minio.endpoint | quote }}
+  MINIO_BUCKET: {{ .Values.minio.bucket | quote }}
+
+  # LDAP configuration
+  LDAP_URL: "ldap://{{ include "dcm4chee.fullname" . }}-ldap.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.ldap.service.port }}"
+  LDAP_BASE_DN: "dc=dcm4che,dc=org"
+  LDAP_ORGANISATION: {{ .Values.ldap.organisation | quote }}
+  LDAP_DOMAIN: {{ .Values.ldap.domain | quote }}
+
+  # DCM4CHEE configuration
+  ARCHIVE_DEVICE_NAME: {{ .Values.arc.archiveDeviceName | quote }}
+  AE_TITLE: {{ .Values.arc.aeTitle | quote }}
+  DICOM_PORT: {{ .Values.arc.dicomPort | quote }}
+  WILDFLY_WAIT_FOR: "{{ include "dcm4chee.fullname" . }}-ldap.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.ldap.service.port }} {{ .Values.postgres.host }}:{{ .Values.postgres.port }}"
+
+  # JVM settings
+  {{- if .Values.arc.javaOpts }}
+  JAVA_OPTS: {{ .Values.arc.javaOpts | quote }}
+  {{- end }}
+
+  # Nginx configuration
+  NGINX_CLIENT_MAX_BODY_SIZE: {{ .Values.nginx.clientMaxBodySize | quote }}
+  {{- if .Values.nginx.authBackendUrl }}
+  NGINX_AUTH_BACKEND_URL: {{ .Values.nginx.authBackendUrl | quote }}
+  {{- end }}
+
+  {{- if .Values.dicomBaseUrl }}
+  DICOM_BASE_URL: {{ .Values.dicomBaseUrl | quote }}
+  {{- end }}
+
+  {{- with .Values.configMap.data }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+{{- end }}

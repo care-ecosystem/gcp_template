@@ -22,7 +22,15 @@ ldap:
   replicaCount: 1
   service:
     port: 389
+    ldapsPort: 636
+  # LDAP configuration
+  organisation: "dcm4che.org"
+  domain: "dcm4che.org"
+  # Persistent storage for LDAP data
   storage:
+    enabled: false  # Set to true to use PVC instead of emptyDir
+    size: 2Gi
+    storageClass: ""  # Use default storage class if not specified
     endpoint: "https://storage.googleapis.com"
   resources:
     requests:
@@ -41,6 +49,25 @@ arc:
   replicaCount: 1
   service:
     port: 8080
+    httpsPort: 8443
+    adminPort: 9990
+    dicomPort: 11112
+    hl7Port: 2575
+  # Archive configuration
+  archiveDeviceName: "dcm4chee-arc"
+  aeTitle: "DCM4CHEE"
+  dicomPort: 11112
+  # NodePort service for DICOM C-STORE from external modalities
+  dicomNodePort:
+    enabled: false  # Set to true to create NodePort service for DICOM
+    nodePort: 31112  # NodePort number (30000-32767)
+  # JVM settings
+  javaOpts: "-Xms64m -Xmx4096m -XX:MetaspaceSize=96M -XX:MaxMetaspaceSize=512m -Djava.net.preferIPv4Stack=true"
+  # Persistent storage for DCM4CHEE data
+  storage:
+    enabled: false  # Set to true to use PVC instead of emptyDir
+    size: 20Gi
+    storageClass: ""  # Use default storage class if not specified
   resources:
     requests:
       cpu: 500m
@@ -124,12 +151,52 @@ secret:
     # DICOM_BUCKET_NAME: ""
     # GCS_ACCESS_KEY: ""
     # GCS_SECRET_KEY: ""
+    # MINIO_ENDPOINT: ""
+
+# --- PostgreSQL Configuration ---
+# Default configuration for PostgreSQL (can be overridden in secrets)
+postgres:
+  host: "postgres-care-rw"
+  port: "5432"
+  database: "dicom"
+  # User and password should be provided via secrets
+
+# --- MinIO Configuration ---
+# Default configuration for MinIO/S3 storage (can be overridden in secrets)
+minio:
+  endpoint: "http://minio:9000"
+  bucket: "dicom-bucket"
+  # Access key and secret should be provided via secrets
+
+# Domain configuration for ingress
+domain: ""
+
+# --- ConfigMap ---
+configMap:
+  enabled: true
+  data: {}
 
 # --- Database Migration Job ---
 migration:
   enabled: true
   backoffLimit: 3
   ttlSecondsAfterFinished: 600
+
+# --- MinIO Bucket Initialization Job ---
+minioInit:
+  enabled: false  # Set to true to create DICOM bucket in MinIO
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  image:
+    repository: minio/mc
+    tag: "latest"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
 
 # --- GCP Backend Policy ---
 backendPolicy:

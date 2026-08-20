@@ -80,7 +80,12 @@ spec:
             {{- toYaml .Values.ldap.resources | nindent 12 }}
       volumes:
         - name: ldap-data
+          {{- if .Values.ldap.storage.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "dcm4chee.fullname" . }}-ldap-data
+          {{- else }}
           emptyDir: {}
+          {{- end }}
         - name: ldap-config
           emptyDir: {}
         - name: ldif-config

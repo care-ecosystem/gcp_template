@@ -68,7 +68,12 @@ spec:
         - name: arc-storage
           emptyDir: {}
         - name: arc-wildfly
+          {{- if .Values.arc.storage.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "dcm4chee.fullname" . }}-arc-data
+          {{- else }}
           emptyDir: {}
+          {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

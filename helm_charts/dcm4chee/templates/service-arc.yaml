@@ -12,6 +12,30 @@ spec:
       targetPort: 8080
       protocol: TCP
       name: http
+    {{- if .Values.arc.service.httpsPort }}
+    - port: {{ .Values.arc.service.httpsPort }}
+      targetPort: 8443
+      protocol: TCP
+      name: https
+    {{- end }}
+    {{- if .Values.arc.service.adminPort }}
+    - port: {{ .Values.arc.service.adminPort }}
+      targetPort: 9990
+      protocol: TCP
+      name: admin
+    {{- end }}
+    {{- if .Values.arc.service.dicomPort }}
+    - port: {{ .Values.arc.service.dicomPort }}
+      targetPort: 11112
+      protocol: TCP
+      name: dicom
+    {{- end }}
+    {{- if .Values.arc.service.hl7Port }}
+    - port: {{ .Values.arc.service.hl7Port }}
+      targetPort: 2575
+      protocol: TCP
+      name: hl7
+    {{- end }}
   selector:
     {{- include "dcm4chee.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: arc

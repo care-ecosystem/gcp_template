@@ -1,0 +1,86 @@
+{{- if .Values.minioInit.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "dcm4chee.fullname" . }}-init-minio
+  labels:
+    {{- include "dcm4chee.labels" . | nindent 4 }}
+    app.kubernetes.io/component: init-minio
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  ttlSecondsAfterFinished: {{ .Values.minioInit.ttlSecondsAfterFinished }}
+  backoffLimit: {{ .Values.minioInit.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        {{- include "dcm4chee.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: init-minio
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: mc
+          image: "{{ .Values.minioInit.image.repository }}:{{ .Values.minioInit.image.tag }}"
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              echo "=== MinIO DICOM Bucket Initialization ==="
+
+              echo "Configuring MinIO client..."
+              mc alias set myminio ${MINIO_ENDPOINT} ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY}
+
+              echo "Creating ${DICOM_BUCKET_NAME} bucket..."
+              mc mb myminio/${DICOM_BUCKET_NAME} --ignore-existing
+
+              echo "Enabling versioning on ${DICOM_BUCKET_NAME} bucket..."
+              mc version enable myminio/${DICOM_BUCKET_NAME}
+
+              echo "Setting lifecycle policy for ${DICOM_BUCKET_NAME}..."
+              cat > /tmp/lifecycle.json <<'LIFECYCLE'
+              {
+                "Rules": [
+                  {
+                    "Expiration": {
+                      "Days": 0,
+                      "ExpiredObjectDeleteMarker": true
+                    },
+                    "ID": "expire-deleted-markers",
+                    "Status": "Enabled",
+                    "NoncurrentVersionExpiration": {
+                      "NoncurrentDays": 90
+                    }
+                  }
+                ]
+              }
+              LIFECYCLE
+              mc ilm import myminio/${DICOM_BUCKET_NAME} < /tmp/lifecycle.json || true
+
+              echo "=== DICOM bucket setup complete! ==="
+          env:
+            - name: MINIO_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: MINIO_ENDPOINT
+                  optional: true
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: GCS_ACCESS_KEY
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: GCS_SECRET_KEY
+            - name: DICOM_BUCKET_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: DICOM_BUCKET_NAME
+          resources:
+            {{- toYaml .Values.minioInit.resources | nindent 12 }}
+{{- end }}
