@@ -15,9 +15,11 @@ data:
   POSTGRES_PORT: {{ .Values.postgres.port | quote }}
   POSTGRES_DB: {{ .Values.postgres.database | quote }}
 
-  # MinIO configuration
-  MINIO_ENDPOINT: {{ .Values.minio.endpoint | quote }}
-  MINIO_BUCKET: {{ .Values.minio.bucket | quote }}
+  # Google Cloud Storage configuration
+  GCS_ENDPOINT: {{ .Values.gcs.endpoint | quote }}
+  GCS_BUCKET: {{ .Values.gcs.bucket | quote }}
+  STORAGE_ENDPOINT: {{ .Values.gcs.endpoint | quote }}
+  STORAGE_BUCKET: {{ .Values.gcs.bucket | quote }}
 
   # LDAP configuration
   LDAP_URL: "ldap://{{ include "dcm4chee.fullname" . }}-ldap.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.ldap.service.port }}"

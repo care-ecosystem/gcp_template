@@ -1,0 +1,120 @@
+{{- if .Values.gcsInit.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "dcm4chee.fullname" . }}-init-gcs
+  labels:
+    {{- include "dcm4chee.labels" . | nindent 4 }}
+    app.kubernetes.io/component: init-gcs
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  ttlSecondsAfterFinished: {{ .Values.gcsInit.ttlSecondsAfterFinished }}
+  backoffLimit: {{ .Values.gcsInit.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        {{- include "dcm4chee.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: init-gcs
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: gcloud
+          image: "{{ .Values.gcsInit.image.repository }}:{{ .Values.gcsInit.image.tag }}"
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              echo "=== Google Cloud Storage DICOM Bucket Initialization ==="
+
+              # Authenticate using HMAC keys (S3-compatible mode)
+              # GCS supports S3-compatible API with HMAC keys
+              echo "Configuring gsutil with HMAC credentials..."
+
+              # Create boto config for S3-compatible access
+              cat > /root/.boto <<EOF
+              [Credentials]
+              gs_access_key_id = ${GCS_ACCESS_KEY}
+              gs_secret_access_key = ${GCS_SECRET_KEY}
+
+              [Boto]
+              https_validate_certificates = True
+
+              [GSUtil]
+              default_project_id = ${GCP_PROJECT_ID}
+              prefer_api = json
+              EOF
+
+              echo "Creating ${DICOM_BUCKET_NAME} bucket..."
+              gsutil mb -p ${GCP_PROJECT_ID} -c STANDARD -l ${GCS_LOCATION:-us-central1} gs://${DICOM_BUCKET_NAME} 2>/dev/null || echo "Bucket already exists"
+
+              echo "Enabling versioning on ${DICOM_BUCKET_NAME} bucket..."
+              gsutil versioning set on gs://${DICOM_BUCKET_NAME}
+
+              echo "Setting lifecycle policy for ${DICOM_BUCKET_NAME}..."
+              cat > /tmp/lifecycle.json <<'LIFECYCLE'
+              {
+                "lifecycle": {
+                  "rule": [
+                    {
+                      "action": {
+                        "type": "Delete"
+                      },
+                      "condition": {
+                        "numNewerVersions": 3,
+                        "isLive": false
+                      }
+                    }
+                  ]
+                }
+              }
+              LIFECYCLE
+              gsutil lifecycle set /tmp/lifecycle.json gs://${DICOM_BUCKET_NAME}
+
+              echo "Setting CORS policy for DICOM bucket..."
+              cat > /tmp/cors.json <<'CORS'
+              [
+                {
+                  "origin": ["*"],
+                  "method": ["GET", "POST", "PUT", "DELETE", "HEAD"],
+                  "responseHeader": ["Content-Type", "Authorization"],
+                  "maxAgeSeconds": 3600
+                }
+              ]
+              CORS
+              gsutil cors set /tmp/cors.json gs://${DICOM_BUCKET_NAME}
+
+              echo "=== DICOM bucket setup complete! ==="
+          env:
+            - name: GCS_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: GCS_ACCESS_KEY
+            - name: GCS_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: GCS_SECRET_KEY
+            - name: DICOM_BUCKET_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: DICOM_BUCKET_NAME
+            - name: GCP_PROJECT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: GCP_PROJECT_ID
+                  optional: true
+            - name: GCS_LOCATION
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: GCS_LOCATION
+                  optional: true
+          resources:
+            {{- toYaml .Values.gcsInit.resources | nindent 12 }}
+{{- end }}

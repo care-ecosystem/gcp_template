@@ -140,9 +140,10 @@ secret:
     # DATABASE_URL: ""
     # LDAP_ADMIN_PASSWORD: "secret"
     # DICOM_BUCKET_NAME: ""
-    # GCS_ACCESS_KEY: ""
-    # GCS_SECRET_KEY: ""
-    # MINIO_ENDPOINT: ""
+    # GCS_ACCESS_KEY: ""        # GCS HMAC Access Key ID
+    # GCS_SECRET_KEY: ""        # GCS HMAC Secret
+    # GCP_PROJECT_ID: ""        # GCP Project ID for bucket creation
+    # GCS_LOCATION: "us-central1"  # GCS bucket location
 
 # --- PostgreSQL Configuration ---
 # Default configuration for PostgreSQL (can be overridden in secrets)
@@ -152,12 +153,13 @@ postgres:
   database: "dicom"
   # User and password should be provided via secrets
 
-# --- MinIO Configuration ---
-# Default configuration for MinIO/S3 storage (can be overridden in secrets)
-minio:
-  endpoint: "http://minio:9000"
+# --- Google Cloud Storage Configuration ---
+# Default configuration for GCS storage (can be overridden in secrets)
+gcs:
+  endpoint: "https://storage.googleapis.com"
   bucket: "dicom-bucket"
-  # Access key and secret should be provided via secrets
+  # GCS HMAC access key and secret should be provided via secrets
+  # For GCS, ensure you have created HMAC keys for the service account
 
 # Domain configuration for ingress
 domain: ""
@@ -173,14 +175,14 @@ migration:
   backoffLimit: 3
   ttlSecondsAfterFinished: 600
 
-# --- MinIO Bucket Initialization Job ---
-minioInit:
-  enabled: false  # Set to true to create DICOM bucket in MinIO
+# --- GCS Bucket Initialization Job ---
+gcsInit:
+  enabled: false  # Set to true to create DICOM bucket in GCS
   backoffLimit: 3
   ttlSecondsAfterFinished: 600
   image:
-    repository: minio/mc
-    tag: "latest"
+    repository: google/cloud-sdk
+    tag: "alpine"
   resources:
     requests:
       cpu: 100m
