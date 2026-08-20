@@ -31,6 +31,19 @@ ldap:
     verifyClient: "never"
   readonlyUser: false
   logLevel: "256"
+  # Probes
+  livenessProbe:
+    enabled: true
+    tcpSocket:
+      port: 389
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    enabled: true
+    tcpSocket:
+      port: 389
+    initialDelaySeconds: 5
+    periodSeconds: 5
   resources:
     requests:
       cpu: 100m
@@ -86,6 +99,21 @@ ohif:
     limits:
       cpu: 500m
       memory: 512Mi
+  # Probes
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /
+      port: 80
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /
+      port: 80
+    initialDelaySeconds: 10
+    periodSeconds: 5
 
 # --- Nginx Proxy ---
 nginx:
@@ -104,6 +132,21 @@ nginx:
     limits:
       cpu: 200m
       memory: 128Mi
+  # Probes
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /
+      port: 80
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /
+      port: 80
+    initialDelaySeconds: 5
+    periodSeconds: 5
   # URL of care backend authentication endpoint
   authBackendUrl: "http://care-backend-care-be:9000/api/care_radiology/dicom/authenticate/"
   clientMaxBodySize: "100M"
@@ -136,12 +179,19 @@ envFromSecret: []
 secret:
   enabled: false
   data: {}
-    # POSTGRES_DB: ""
+    # PostgreSQL credentials
     # POSTGRES_USER: ""
     # POSTGRES_PASSWORD: ""
-    # POSTGRES_HOST: ""
-    # DATABASE_URL: ""
+    # DATABASE_URL: ""  # Optional: Full PostgreSQL connection string
+
+    # LDAP credentials
     # LDAP_ADMIN_PASSWORD: "secret"
+
+    # Wildfly admin credentials (optional)
+    # WILDFLY_ADMIN_USER: "admin"
+    # WILDFLY_ADMIN_PASSWORD: "admin"
+
+    # GCS Storage credentials
     # DICOM_BUCKET_NAME: ""
     # GCS_ACCESS_KEY: ""        # GCS HMAC Access Key ID
     # GCS_SECRET_KEY: ""        # GCS HMAC Secret

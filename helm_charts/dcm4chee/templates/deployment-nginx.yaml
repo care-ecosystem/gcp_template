@@ -35,6 +35,22 @@ spec:
             - name: http
               containerPort: 80
               protocol: TCP
+          {{- if .Values.nginx.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.nginx.livenessProbe.httpGet.path }}
+              port: {{ .Values.nginx.livenessProbe.httpGet.port }}
+            initialDelaySeconds: {{ .Values.nginx.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.nginx.livenessProbe.periodSeconds }}
+          {{- end }}
+          {{- if .Values.nginx.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.nginx.readinessProbe.httpGet.path }}
+              port: {{ .Values.nginx.readinessProbe.httpGet.port }}
+            initialDelaySeconds: {{ .Values.nginx.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.nginx.readinessProbe.periodSeconds }}
+          {{- end }}
           volumeMounts:
             - name: nginx-config
               mountPath: /etc/nginx/nginx.conf

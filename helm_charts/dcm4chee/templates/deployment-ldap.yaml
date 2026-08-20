@@ -34,18 +34,20 @@ spec:
             - name: ldap
               containerPort: 389
               protocol: TCP
+            - name: ldaps
+              containerPort: 636
+              protocol: TCP
+          {{- if .Values.ldap.livenessProbe.enabled }}
+          livenessProbe:
+            {{- toYaml .Values.ldap.livenessProbe.tcpSocket | nindent 12 }}
+            initialDelaySeconds: {{ .Values.ldap.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.ldap.livenessProbe.periodSeconds }}
+          {{- end }}
+          {{- if .Values.ldap.readinessProbe.enabled }}
           readinessProbe:
-            exec:
-              command:
-                - sh
-                - -c
-                - |
-                  ldapsearch -x -D "cn=admin,dc=dcm4che,dc=org" -w "$LDAP_ROOTPASS" -H ldap:/// \
-                    -b "dcmStorageID=fs1,dicomDeviceName=dcm4chee-arc,cn=Devices,cn=DICOM Configuration,dc=dcm4che,dc=org" \
-                    dcmURI | grep -q "{{ .Values.gcs.endpoint }}"
-            initialDelaySeconds: 10
-            periodSeconds: 5
-            failureThreshold: 30
+            {{- toYaml .Values.ldap.readinessProbe.tcpSocket | nindent 12 }}
+            initialDelaySeconds: {{ .Values.ldap.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.ldap.readinessProbe.periodSeconds }}
           env:
             # LDAP Configuration
             - name: LDAP_ORGANISATION

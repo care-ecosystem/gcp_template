@@ -26,6 +26,57 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "dcm4chee.serviceAccountName" . }}
+      {{- if .Values.arc.initContainers }}
+      initContainers:
+        {{- if .Values.arc.initContainers.waitForPostgres.enabled }}
+        - name: wait-for-postgres
+          image: {{ .Values.arc.initContainers.waitForPostgres.image }}
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h {{ .Values.postgres.host }} -p {{ .Values.postgres.port }} -U {{ .Values.postgres.database }}; do
+                echo "Waiting for PostgreSQL..."
+                sleep 5
+              done
+              echo "PostgreSQL is ready!"
+        {{- end }}
+        {{- if .Values.arc.initContainers.waitForLdap.enabled }}
+        - name: wait-for-ldap
+          image: {{ .Values.arc.initContainers.waitForLdap.image }}
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z {{ include "dcm4chee.fullname" . }}-ldap 389; do
+                echo "Waiting for LDAP..."
+                sleep 5
+              done
+              echo "LDAP is ready!"
+        {{- end }}
+        {{- if .Values.arc.initContainers.createDicomDb.enabled }}
+        - name: create-dicom-db
+          image: {{ .Values.arc.initContainers.createDicomDb.image }}
+          command:
+            - sh
+            - -c
+            - |
+              export PGPASSWORD="${POSTGRES_PASSWORD}"
+              psql -h {{ .Values.postgres.host }} -U ${POSTGRES_USER} -d postgres -c "CREATE DATABASE {{ .Values.postgres.database }};" || echo "Database already exists"
+              psql -h {{ .Values.postgres.host }} -U ${POSTGRES_USER} -d {{ .Values.postgres.database }} -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" || true
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: POSTGRES_PASSWORD
+        {{- end }}
+      {{- end }}
       containers:
         - name: arc
           image: "{{ .Values.arc.image.repository }}:{{ .Values.arc.image.tag }}"
@@ -34,29 +85,115 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
+            - name: https
+              containerPort: 8443
+              protocol: TCP
+            - name: admin
+              containerPort: 9990
+              protocol: TCP
+            - name: dicom
+              containerPort: 11112
+              protocol: TCP
+            - name: hl7
+              containerPort: 2575
+              protocol: TCP
+          {{- if .Values.arc.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.arc.livenessProbe.httpGet.path }}
+              port: {{ .Values.arc.livenessProbe.httpGet.port }}
+            initialDelaySeconds: {{ .Values.arc.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.arc.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.arc.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.arc.livenessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.arc.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.arc.readinessProbe.httpGet.path }}
+              port: {{ .Values.arc.readinessProbe.httpGet.port }}
+            initialDelaySeconds: {{ .Values.arc.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.arc.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.arc.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.arc.readinessProbe.failureThreshold }}
+          {{- end }}
           env:
+            # PostgreSQL connection
+            - name: POSTGRES_HOST
+              value: {{ .Values.postgres.host | quote }}
+            - name: POSTGRES_PORT
+              value: {{ .Values.postgres.port | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.database | quote }}
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: POSTGRES_PASSWORD
+            # LDAP connection
             - name: LDAP_URL
               value: "ldap://{{ include "dcm4chee.fullname" . }}-ldap.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.ldap.service.port }}"
+            - name: LDAP_BASE_DN
+              value: "dc=dcm4che,dc=org"
             - name: LDAP_ROOTPASS
               valueFrom:
                 secretKeyRef:
                   name: {{ include "dcm4chee.fullname" . }}-secret
                   key: LDAP_ADMIN_PASSWORD
+            - name: LDAP_CONFIGPASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: LDAP_ADMIN_PASSWORD
+            # Wildfly settings
+            - name: WILDFLY_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: WILDFLY_ADMIN_USER
+                  optional: true
+            - name: WILDFLY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: WILDFLY_ADMIN_PASSWORD
+                  optional: true
             - name: WILDFLY_CHOWN
               value: "/storage"
             - name: WILDFLY_WAIT_FOR
-              value: "{{ include "dcm4chee.fullname" . }}-ldap.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.ldap.service.port }}"
-          {{- if or .Values.envFromSecret (and .Values.secret.enabled .Values.secret.data) }}
-          envFrom:
-            {{- range .Values.envFromSecret }}
-            - secretRef:
-                name: {{ .name }}
+              value: "{{ include "dcm4chee.fullname" . }}-ldap.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.ldap.service.port }} {{ .Values.postgres.host }}:{{ .Values.postgres.port }}"
+            # Archive settings
+            - name: ARCHIVE_DEVICE_NAME
+              value: {{ .Values.arc.archiveDeviceName | quote }}
+            - name: AE_TITLE
+              value: {{ .Values.arc.aeTitle | quote }}
+            - name: DICOM_PORT
+              value: {{ .Values.arc.dicomPort | quote }}
+            # GCS Storage configuration
+            - name: STORAGE_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: GCS_ACCESS_KEY
+            - name: STORAGE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: GCS_SECRET_KEY
+            - name: STORAGE_ENDPOINT
+              value: {{ .Values.gcs.endpoint | quote }}
+            - name: STORAGE_BUCKET
+              value: {{ .Values.gcs.bucket | quote }}
+            # JVM settings
+            {{- if .Values.arc.javaOpts }}
+            - name: JAVA_OPTS
+              value: {{ .Values.arc.javaOpts | quote }}
             {{- end }}
-            {{- if and .Values.secret.enabled .Values.secret.data }}
-            - secretRef:
-                name: {{ include "dcm4chee.fullname" . }}-secret
-            {{- end }}
-          {{- end }}
           volumeMounts:
             - name: arc-storage
               mountPath: /storage

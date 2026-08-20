@@ -35,6 +35,22 @@ spec:
             - name: http
               containerPort: 80
               protocol: TCP
+          {{- if .Values.ohif.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.ohif.livenessProbe.httpGet.path }}
+              port: {{ .Values.ohif.livenessProbe.httpGet.port }}
+            initialDelaySeconds: {{ .Values.ohif.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.ohif.livenessProbe.periodSeconds }}
+          {{- end }}
+          {{- if .Values.ohif.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.ohif.readinessProbe.httpGet.path }}
+              port: {{ .Values.ohif.readinessProbe.httpGet.port }}
+            initialDelaySeconds: {{ .Values.ohif.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.ohif.readinessProbe.periodSeconds }}
+          {{- end }}
           volumeMounts:
             - name: ohif-config
               mountPath: /usr/share/nginx/html/app-config.js
