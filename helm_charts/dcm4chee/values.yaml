@@ -26,8 +26,11 @@ ldap:
   # LDAP configuration
   organisation: "dcm4che.org"
   domain: "dcm4che.org"
-  storage:
-    endpoint: "https://storage.googleapis.com"
+  tls:
+    enabled: false
+    verifyClient: "never"
+  readonlyUser: false
+  logLevel: "256"
   resources:
     requests:
       cpu: 100m

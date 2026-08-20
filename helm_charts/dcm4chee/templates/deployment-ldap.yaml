@@ -42,21 +42,63 @@ spec:
                 - |
                   ldapsearch -x -D "cn=admin,dc=dcm4che,dc=org" -w "$LDAP_ROOTPASS" -H ldap:/// \
                     -b "dcmStorageID=fs1,dicomDeviceName=dcm4chee-arc,cn=Devices,cn=DICOM Configuration,dc=dcm4che,dc=org" \
-                    dcmURI | grep -q "{{ .Values.ldap.storage.endpoint }}"
+                    dcmURI | grep -q "{{ .Values.gcs.endpoint }}"
             initialDelaySeconds: 10
             periodSeconds: 5
             failureThreshold: 30
           env:
+            # LDAP Configuration
+            - name: LDAP_ORGANISATION
+              value: {{ .Values.ldap.organisation | quote }}
+            - name: LDAP_DOMAIN
+              value: {{ .Values.ldap.domain | quote }}
+            - name: LDAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: LDAP_ADMIN_PASSWORD
+            - name: LDAP_CONFIG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: LDAP_ADMIN_PASSWORD
             - name: LDAP_ROOTPASS
               valueFrom:
                 secretKeyRef:
                   name: {{ include "dcm4chee.fullname" . }}-secret
                   key: LDAP_ADMIN_PASSWORD
-            - name: DICOM_BUCKET_NAME
+            - name: LDAP_TLS
+              value: {{ .Values.ldap.tls.enabled | quote }}
+            - name: LDAP_TLS_VERIFY_CLIENT
+              value: {{ .Values.ldap.tls.verifyClient | quote }}
+            - name: LDAP_READONLY_USER
+              value: {{ .Values.ldap.readonlyUser | quote }}
+            - name: LDAP_LOG_LEVEL
+              value: {{ .Values.ldap.logLevel | quote }}
+            # GCS Storage Configuration
+            - name: STORAGE_URI
+              value: "jclouds:s3:{{ .Values.gcs.endpoint }}"
+            - name: STORAGE_BUCKET_NAME
+              value: "{{ .Values.gcs.bucket }}"
+            - name: STORAGE_BUCKET_ENDPOINT
+              value: "{{ .Values.gcs.endpoint }}"
+            - name: STORAGE_BUCKET_USERNAME
               valueFrom:
                 secretKeyRef:
                   name: {{ include "dcm4chee.fullname" . }}-secret
-                  key: DICOM_BUCKET_NAME
+                  key: GCS_ACCESS_KEY
+            - name: STORAGE_BUCKET_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dcm4chee.fullname" . }}-secret
+                  key: GCS_SECRET_KEY
+            - name: STORAGE_BUCKET_PATHSTYLE
+              value: "true"
+            - name: STORAGE_BUCKET_VIRTHOST
+              value: "false"
+            # Additional bucket configuration for LDAP init
+            - name: DICOM_BUCKET_NAME
+              value: "{{ .Values.gcs.bucket }}"
             - name: GCS_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
