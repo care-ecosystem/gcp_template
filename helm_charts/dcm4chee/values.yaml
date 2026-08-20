@@ -26,11 +26,7 @@ ldap:
   # LDAP configuration
   organisation: "dcm4che.org"
   domain: "dcm4che.org"
-  # Persistent storage for LDAP data
   storage:
-    enabled: false  # Set to true to use PVC instead of emptyDir
-    size: 2Gi
-    storageClass: ""  # Use default storage class if not specified
     endpoint: "https://storage.googleapis.com"
   resources:
     requests:
@@ -63,11 +59,6 @@ arc:
     nodePort: 31112  # NodePort number (30000-32767)
   # JVM settings
   javaOpts: "-Xms64m -Xmx4096m -XX:MetaspaceSize=96M -XX:MaxMetaspaceSize=512m -Djava.net.preferIPv4Stack=true"
-  # Persistent storage for DCM4CHEE data
-  storage:
-    enabled: false  # Set to true to use PVC instead of emptyDir
-    size: 20Gi
-    storageClass: ""  # Use default storage class if not specified
   resources:
     requests:
       cpu: 500m
