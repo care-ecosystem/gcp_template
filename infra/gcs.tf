@@ -69,14 +69,29 @@ module "dicom_bucket" {
   bucket_policy_only = {
     (local.dicom_bucket_name) = true
   }
-  cors = [
+  versioning = {
+    (local.dicom_bucket_name) = true
+  }
+  lifecycle_rules = [
     {
-      origin          = local.cors_origins
-      method          = ["GET", "PUT", "POST", "DELETE"]
-      response_header = ["*"]
-      max_age_seconds = 3000
+      action = {
+        type = "Delete"
+      }
+      condition = {
+        num_newer_versions = 3
+        with_state         = "ARCHIVED"
+      }
     }
   ]
+  cors = [
+    {
+      origin          = ["*"]
+      method          = ["GET", "POST", "PUT", "DELETE", "HEAD"]
+      response_header = ["Content-Type", "Authorization"]
+      max_age_seconds = 3600
+    }
+  ]
+
   encryption_key_names = {
     (local.dicom_bucket_name) = "projects/${var.project_id}/locations/${var.region}/keyRings/${var.org}-${var.app}-${var.environment}-keyring/cryptoKeys/dicom-key"
   }

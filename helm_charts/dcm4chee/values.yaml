@@ -228,22 +228,6 @@ migration:
   backoffLimit: 3
   ttlSecondsAfterFinished: 600
 
-# --- GCS Bucket Initialization Job ---
-gcsInit:
-  enabled: false  # Set to true to create DICOM bucket in GCS
-  backoffLimit: 3
-  ttlSecondsAfterFinished: 600
-  image:
-    repository: google/cloud-sdk
-    tag: "alpine"
-  resources:
-    requests:
-      cpu: 100m
-      memory: 128Mi
-    limits:
-      cpu: 200m
-      memory: 256Mi
-
 # --- GCP Backend Policy ---
 backendPolicy:
   enabled: "{{ .Values.global.backendPolicy.enabled }}"
