@@ -61,10 +61,7 @@ arc:
   replicaCount: 1
   service:
     port: 8080
-    httpsPort: 8443
-    adminPort: 9990
     dicomPort: 11112
-    hl7Port: 2575
   # Archive configuration
   archiveDeviceName: "dcm4chee-arc"
   aeTitle: "DCM4CHEE"

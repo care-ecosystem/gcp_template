@@ -85,17 +85,8 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
-            - name: https
-              containerPort: 8443
-              protocol: TCP
-            - name: admin
-              containerPort: 9990
-              protocol: TCP
             - name: dicom
               containerPort: 11112
-              protocol: TCP
-            - name: hl7
-              containerPort: 2575
               protocol: TCP
           {{- if .Values.arc.livenessProbe.enabled }}
           livenessProbe:
