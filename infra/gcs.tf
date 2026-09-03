@@ -83,15 +83,6 @@ module "dicom_bucket" {
       }
     }
   ]
-  cors = [
-    {
-      origin          = ["*"]
-      method          = ["GET", "POST", "PUT", "DELETE", "HEAD"]
-      response_header = ["Content-Type", "Authorization"]
-      max_age_seconds = 3600
-    }
-  ]
-
   encryption_key_names = {
     (local.dicom_bucket_name) = "projects/${var.project_id}/locations/${var.region}/keyRings/${var.org}-${var.app}-${var.environment}-keyring/cryptoKeys/dicom-key"
   }
