@@ -169,27 +169,26 @@ affinity: {}
 envFromSecret: []
 
 # --- Secrets (set via Terraform set_sensitive) ---
+# All secret keys are automatically loaded as environment variables via envFrom
 secret:
   enabled: false
   data: {}
-    # PostgreSQL credentials
+    # Required:
+    # POSTGRES_HOST: ""
+    # POSTGRES_PORT: "5432"
+    # POSTGRES_DB: ""
     # POSTGRES_USER: ""
     # POSTGRES_PASSWORD: ""
-    # DATABASE_URL: ""  # Optional: Full PostgreSQL connection string
+    # LDAP_ADMIN_PASSWORD: ""
+    # STORAGE_ACCESS_KEY: ""  # GCS HMAC Access Key
+    # STORAGE_SECRET_KEY: ""  # GCS HMAC Secret
+    # STORAGE_ENDPOINT: "https://storage.googleapis.com"
+    # STORAGE_BUCKET: ""
 
-    # LDAP credentials
-    # LDAP_ADMIN_PASSWORD: "secret"
-
-    # Wildfly admin credentials (optional)
+    # Optional:
     # WILDFLY_ADMIN_USER: "admin"
     # WILDFLY_ADMIN_PASSWORD: "admin"
-
-    # GCS Storage credentials
-    # DICOM_BUCKET_NAME: ""
-    # GCS_ACCESS_KEY: ""        # GCS HMAC Access Key ID
-    # GCS_SECRET_KEY: ""        # GCS HMAC Secret
-    # GCP_PROJECT_ID: ""        # GCP Project ID for bucket creation
-    # GCS_LOCATION: "us-central1"  # GCS bucket location
+    # JAVA_OPTS: "-Xms64m -Xmx4096m..."
 
 # --- PostgreSQL Configuration ---
 # Default configuration for PostgreSQL (can be overridden in secrets)
