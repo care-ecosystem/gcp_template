@@ -26,57 +26,6 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "dcm4chee.serviceAccountName" . }}
-      {{- if .Values.arc.initContainers }}
-      initContainers:
-        {{- if .Values.arc.initContainers.waitForPostgres.enabled }}
-        - name: wait-for-postgres
-          image: {{ .Values.arc.initContainers.waitForPostgres.image }}
-          command:
-            - sh
-            - -c
-            - |
-              until pg_isready -h {{ .Values.postgres.host }} -p {{ .Values.postgres.port }} -U {{ .Values.postgres.database }}; do
-                echo "Waiting for PostgreSQL..."
-                sleep 5
-              done
-              echo "PostgreSQL is ready!"
-        {{- end }}
-        {{- if .Values.arc.initContainers.waitForLdap.enabled }}
-        - name: wait-for-ldap
-          image: {{ .Values.arc.initContainers.waitForLdap.image }}
-          command:
-            - sh
-            - -c
-            - |
-              until nc -z {{ include "dcm4chee.fullname" . }}-ldap 389; do
-                echo "Waiting for LDAP..."
-                sleep 5
-              done
-              echo "LDAP is ready!"
-        {{- end }}
-        {{- if .Values.arc.initContainers.createDicomDb.enabled }}
-        - name: create-dicom-db
-          image: {{ .Values.arc.initContainers.createDicomDb.image }}
-          command:
-            - sh
-            - -c
-            - |
-              export PGPASSWORD="${POSTGRES_PASSWORD}"
-              psql -h {{ .Values.postgres.host }} -U ${POSTGRES_USER} -d postgres -c "CREATE DATABASE {{ .Values.postgres.database }};" || echo "Database already exists"
-              psql -h {{ .Values.postgres.host }} -U ${POSTGRES_USER} -d {{ .Values.postgres.database }} -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" || true
-          env:
-            - name: POSTGRES_USER
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "dcm4chee.fullname" . }}-secret
-                  key: POSTGRES_USER
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "dcm4chee.fullname" . }}-secret
-                  key: POSTGRES_PASSWORD
-        {{- end }}
-      {{- end }}
       containers:
         - name: arc
           image: "{{ .Values.arc.image.repository }}:{{ .Values.arc.image.tag }}"
