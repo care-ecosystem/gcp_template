@@ -69,12 +69,18 @@ module "dicom_bucket" {
   bucket_policy_only = {
     (local.dicom_bucket_name) = true
   }
-  cors = [
+  versioning = {
+    (local.dicom_bucket_name) = true
+  }
+  lifecycle_rules = [
     {
-      origin          = local.cors_origins
-      method          = ["GET", "PUT", "POST", "DELETE"]
-      response_header = ["*"]
-      max_age_seconds = 3000
+      action = {
+        type = "Delete"
+      }
+      condition = {
+        num_newer_versions = 3
+        with_state         = "ARCHIVED"
+      }
     }
   ]
   encryption_key_names = {

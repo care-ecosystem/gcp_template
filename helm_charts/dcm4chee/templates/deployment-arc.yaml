@@ -34,6 +34,29 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
+            - name: dicom
+              containerPort: 11112
+              protocol: TCP
+          {{- if .Values.arc.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.arc.livenessProbe.httpGet.path }}
+              port: {{ .Values.arc.livenessProbe.httpGet.port }}
+            initialDelaySeconds: {{ .Values.arc.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.arc.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.arc.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.arc.livenessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.arc.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.arc.readinessProbe.httpGet.path }}
+              port: {{ .Values.arc.readinessProbe.httpGet.port }}
+            initialDelaySeconds: {{ .Values.arc.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.arc.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.arc.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.arc.readinessProbe.failureThreshold }}
+          {{- end }}
           env:
             - name: LDAP_URL
               value: "ldap://{{ include "dcm4chee.fullname" . }}-ldap.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.ldap.service.port }}"

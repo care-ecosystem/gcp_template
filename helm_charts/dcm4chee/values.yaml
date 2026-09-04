@@ -22,8 +22,28 @@ ldap:
   replicaCount: 1
   service:
     port: 389
-  storage:
-    endpoint: "https://storage.googleapis.com"
+    ldapsPort: 636
+  # LDAP configuration
+  organisation: "dcm4che.org"
+  domain: "dcm4che.org"
+  tls:
+    enabled: false
+    verifyClient: "never"
+  readonlyUser: false
+  logLevel: "256"
+  # Probes
+  livenessProbe:
+    enabled: true
+    tcpSocket:
+      port: 389
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    enabled: true
+    tcpSocket:
+      port: 389
+    initialDelaySeconds: 5
+    periodSeconds: 5
   resources:
     requests:
       cpu: 100m
@@ -41,6 +61,13 @@ arc:
   replicaCount: 1
   service:
     port: 8080
+    dicomPort: 11112
+  # Archive configuration
+  archiveDeviceName: "dcm4chee-arc"
+  aeTitle: "DCM4CHEE"
+  dicomPort: 11112
+  # JVM settings
+  javaOpts: "-Xms64m -Xmx4096m -XX:MetaspaceSize=96M -XX:MaxMetaspaceSize=512m -Djava.net.preferIPv4Stack=true"
   resources:
     requests:
       cpu: 500m
@@ -65,6 +92,21 @@ ohif:
     limits:
       cpu: 500m
       memory: 512Mi
+  # Probes
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /
+      port: 80
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /
+      port: 80
+    initialDelaySeconds: 10
+    periodSeconds: 5
 
 # --- Nginx Proxy ---
 nginx:
@@ -83,6 +125,21 @@ nginx:
     limits:
       cpu: 200m
       memory: 128Mi
+  # Probes
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /
+      port: 80
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /
+      port: 80
+    initialDelaySeconds: 5
+    periodSeconds: 5
   # URL of care backend authentication endpoint
   authBackendUrl: "http://care-backend-care-be:9000/api/care_radiology/dicom/authenticate/"
   clientMaxBodySize: "100M"
@@ -112,18 +169,45 @@ affinity: {}
 envFromSecret: []
 
 # --- Secrets (set via Terraform set_sensitive) ---
+# All secret keys are automatically loaded as environment variables via envFrom
 secret:
   enabled: false
   data: {}
+    # Required:
+    # POSTGRES_HOST: ""
+    # POSTGRES_PORT: "5432"
     # POSTGRES_DB: ""
     # POSTGRES_USER: ""
     # POSTGRES_PASSWORD: ""
-    # POSTGRES_HOST: ""
-    # DATABASE_URL: ""
-    # LDAP_ADMIN_PASSWORD: "secret"
-    # DICOM_BUCKET_NAME: ""
-    # GCS_ACCESS_KEY: ""
-    # GCS_SECRET_KEY: ""
+    # LDAP_ADMIN_PASSWORD: ""
+    # STORAGE_ACCESS_KEY: ""  # GCS HMAC Access Key
+    # STORAGE_SECRET_KEY: ""  # GCS HMAC Secret
+    # STORAGE_ENDPOINT: "https://storage.googleapis.com"
+    # STORAGE_BUCKET: ""
+
+    # Optional:
+    # WILDFLY_ADMIN_USER: "admin"
+    # WILDFLY_ADMIN_PASSWORD: "admin"
+    # JAVA_OPTS: "-Xms64m -Xmx4096m..."
+
+# --- PostgreSQL Configuration ---
+# Default configuration for PostgreSQL (can be overridden in secrets)
+postgres:
+  host: "postgres-care-rw"
+  port: "5432"
+  database: "dicom"
+  # User and password should be provided via secrets
+
+# --- Google Cloud Storage Configuration ---
+# Default configuration for GCS storage (can be overridden in secrets)
+gcs:
+  endpoint: "https://storage.googleapis.com"
+  bucket: "dicom-bucket"
+  # GCS HMAC access key and secret should be provided via secrets
+  # For GCS, ensure you have created HMAC keys for the service account
+
+# Domain configuration for ingress
+domain: ""
 
 # --- Database Migration Job ---
 migration:
