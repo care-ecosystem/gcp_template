@@ -1,6 +1,6 @@
 apiVersion: v2
 name: dcm4chee
-description: A Helm chart for DCM4CHEE DICOM server with OHIF viewer
+description: A Helm chart for Care Radiology Plugin - DCM4CHEE PACS with OHIF viewer, LDAP, and Nginx proxy (GCS + PostgreSQL)
 type: application
 version: 0.1.0
 appVersion: "5.34.1"
