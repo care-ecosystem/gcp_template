@@ -58,6 +58,24 @@ ohif:
   replicaCount: 1
   service:
     port: 80
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 6
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
   resources:
     requests:
       cpu: 100m
@@ -68,24 +86,11 @@ ohif:
 
 # --- Nginx Proxy ---
 nginx:
-  image:
-    repository: nginx
-    pullPolicy: IfNotPresent
-    tag: "alpine"
-  replicaCount: 1
-  service:
-    type: ClusterIP
-    port: 80
-  resources:
-    requests:
-      cpu: 50m
-      memory: 64Mi
-    limits:
-      cpu: 200m
-      memory: 128Mi
   # URL of care backend authentication endpoint
   authBackendUrl: "http://care-backend-care-be:9000/api/care_radiology/dicom/authenticate/"
   clientMaxBodySize: "100M"
+  # Hostnames allowed to embed the viewer in an iframe
+  frameAncestors: []
 
 # --- DICOM Configuration ---
 # Base URL for OHIF viewer to access DCM4CHEE (e.g., https://dicom.example.com)

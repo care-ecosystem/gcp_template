@@ -250,9 +250,10 @@ locals {
     podAnnotations = {
       "checksum/external-secret" = local.dcm4chee_secret_checksum
     }
-    nginx = merge({
+    nginx = {
       authBackendUrl = "http://care-backend-care-be.${local.namespace_name}.svc.cluster.local:${local.care_backend_port}/api/care_radiology/dicom/authenticate/"
-    }, try(local.dcm4chee_image_values.nginx, {}))
+      frameAncestors = var.web_domain_name
+    }
     httpRoute = {
       hostnames = var.dicom_domain_name
     }
@@ -260,7 +261,7 @@ locals {
       { name = kubernetes_secret.dcm4chee[0].metadata[0].name }
     ] : []
     }, {
-    for component, values in local.dcm4chee_image_values : component => values if component != "nginx"
+    for component, values in local.dcm4chee_image_values : component => values
   })
 
 }
